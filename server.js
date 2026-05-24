@@ -1118,26 +1118,70 @@ const upload = multer({ storage });
 
 if (!fs.existsSync("./uploads")) fs.mkdirSync("./uploads");
 
-app.get("/api/products", async (req, res) => {
-  const products = await Product.find();
-  res.json(products);
-});
+// ============================================================
+// REPLACE your existing GET /api/products route in server.js
+// with this one — supports ?type=shirt&category=Men&limit=8
+// ============================================================
 
+app.get("/api/products", async (req, res) => {
+  try {
+    const filter = {};
+
+    if (req.query.type)     filter.type     = req.query.type;
+    if (req.query.category) filter.category = req.query.category;
+
+    const limit = parseInt(req.query.limit) || 100;
+
+    const products = await Product.find(filter)
+      .limit(limit)
+      .sort({ createdAt: -1 });
+
+    res.json(products); // still returns plain array [] — nothing else changes
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Failed to fetch products" });
+  }
+});
 app.get("/api/product/:id", async (req, res) => {
   const product = await Product.findById(req.params.id);
   res.json(product);
 });
 
 app.post("/api/products", upload.single("image"), async (req, res) => {
-  const { name, price, description } = req.body;
+  try {
 
-  const image = req.file ? `/uploads/${req.file.filename}` : null;
+    const {
+      name,
+      price,
+      description,
+      category,
+      type
+    } = req.body;
 
-  const product = new Product({ name, price, description, image });
+    const image = req.file
+      ? `/uploads/${req.file.filename}`
+      : null;
 
-  await product.save();
+    const product = new Product({
+      name,
+      price,
+      description,
+      category,
+      type,
+      image
+    });
 
-  res.json(product);
+    await product.save();
+
+    res.json(product);
+
+  } catch (err) {
+    console.error(err);
+
+    res.status(500).json({
+      message: "Failed to add product"
+    });
+  }
 });
 
 app.delete("/api/products/:id", async (req, res) => {
@@ -1183,6 +1227,27 @@ app.get("/api/orders/my", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+app.get("/api/orders", async (req, res) => {
+  try {
+
+    const orders = await Order.find()
+      .populate("items.productId")
+      .sort({ createdAt: -1 });
+
+    res.json(orders);
+
+  } catch (err) {
+
+    console.error(err);
+
+    res.status(500).json({
+      message: "Failed to fetch orders"
+    });
+
+  }
+});
+
+
 
 // =======================
 // START SERVER

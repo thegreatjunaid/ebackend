@@ -908,10 +908,20 @@ mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("✅ MongoDB Connected Successfully"))
   .catch((err) => console.log("❌ MongoDB Error:", err));
 
+//CLOUDINARYYY
+const cloudinary = require("cloudinary").v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUD_NAME,
+  api_key: process.env.CLOUD_API_KEY,
+  api_secret: process.env.CLOUD_API_SECRET,
+});
+
+module.exports = cloudinary;
+
 // =======================
 // PROFILE
 // =======================
-
 app.get("/api/profile/:id", async (req, res) => {
   try {
     const user = await User.findById(req.params.id).select("-password");

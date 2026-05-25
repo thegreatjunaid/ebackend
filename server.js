@@ -1135,21 +1135,57 @@ if (!fs.existsSync("./uploads")) fs.mkdirSync("./uploads");
 
 app.get("/api/products", async (req, res) => {
   try {
+    console.log("========== PRODUCTS API HIT ==========");
+    console.log("Full Query:", req.query);
+
     const filter = {};
 
-    if (req.query.type)     filter.type     = req.query.type;
-    if (req.query.category) filter.category = req.query.category;
+    if (req.query.type) {
+      filter.type = req.query.type;
+    }
+
+    if (req.query.category) {
+      filter.category = req.query.category;
+    }
+
+    console.log("Mongo Filter:", filter);
 
     const limit = parseInt(req.query.limit) || 100;
+
+    console.log("Limit:", limit);
 
     const products = await Product.find(filter)
       .limit(limit)
       .sort({ createdAt: -1 });
 
-    res.json(products); // still returns plain array [] — nothing else changes
+    console.log("Products Found:", products.length);
+
+    if (products.length > 0) {
+      console.log("Newest Product:");
+      console.log({
+        name: products[0].name,
+        createdAt: products[0].createdAt,
+      });
+
+      console.log("Oldest Product:");
+      console.log({
+        name: products[products.length - 1].name,
+        createdAt: products[products.length - 1].createdAt,
+      });
+    }
+
+    console.log("=====================================");
+
+    res.json(products);
+
   } catch (err) {
+    console.error("PRODUCT FETCH ERROR:");
     console.error(err);
-    res.status(500).json({ message: "Failed to fetch products" });
+
+    res.status(500).json({
+      message: "Failed to fetch products",
+      error: err.message,
+    });
   }
 });
 app.get("/api/product/:id", async (req, res) => {

@@ -934,7 +934,6 @@ app.get("/api/profile/:id", async (req, res) => {
 // =======================
 // REGISTER (OTP SEND VIA BREVO)
 // =======================
-
 app.post("/api/register", async (req, res) => {
   try {
     const { email, password } = req.body;
@@ -949,57 +948,107 @@ app.post("/api/register", async (req, res) => {
       otpExpire
     };
 
-    // SEND EMAIL VIA BREVO
+    // SEND OTP EMAIL
     await apiInstance.sendTransacEmail({
       sender: {
         email: "jahidjunaid99@gmail.com",
         name: "Your App"
       },
-      to: [{ email: email }],
+
+      to: [
+        {
+          email: email
+        }
+      ],
+
       subject: "OTP Verification",
+
       textContent: `Your OTP is ${otp}. Valid for 60 seconds.`
     });
-
+  
+    console.log("BREVO KEY:", process.env.BREVO_API_KEY);
+console.log("Sending OTP:", otp);
+console.log("To:", email);
     res.json({
       success: true,
       message: "OTP sent to email"
     });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ message: "Server error" });
+    console.log(
+      "REGISTER ERROR:",
+      err.response?.body || err.message || err
+    );
+
+    res.status(500).json({
+      message: "Server error"
+    });
   }
 });
-
-// =======================
-// VERIFY OTP
-// =======================
-
+//verify otp
 app.post("/api/verify-otp", async (req, res) => {
-  const { email, otp } = req.body;
+  try {
+    const { email, otp } = req.body;
 
-  const pendingUser = pendingUsers[email];
+    // CHECK PENDING USER
+    const pendingUser = pendingUsers[email];
 
-  if (!pendingUser)
-    return res.json({ success: false, message: "No pending user" });
+    if (!pendingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "No pending user found"
+      });
+    }
 
-  if (pendingUser.otp !== otp)
-    return res.json({ success: false, message: "Wrong OTP" });
+    // CHECK OTP
+    if (pendingUser.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Wrong OTP"
+      });
+    }
+ 
+      console.log("BODY:", req.body);
+console.log("PENDING USERS:", pendingUsers);
+console.log("EMAIL:", email);
+console.log("OTP:", otp);
+console.log("FOUND USER:", pendingUsers[email]);
+    // CHECK OTP EXPIRATION
+    if (new Date() > pendingUser.otpExpire) {
+      return res.status(400).json({
+        success: false,
+        message: "OTP expired"
+      });
+    }
 
-  if (new Date() > pendingUser.otpExpire)
-    return res.json({ success: false, message: "OTP expired" });
+    // CREATE USER
+    const newUser = new User({
+      email: pendingUser.email,
+      password: pendingUser.password
+    });
 
-  const newUser = new User({
-    email: pendingUser.email,
-    password: pendingUser.password
-  });
+    await newUser.save();
 
-  await newUser.save();
-  delete pendingUsers[email];
+    // REMOVE TEMP USER
+    delete pendingUsers[email];
 
-  res.json({ success: true, message: "Account created" });
+    res.json({
+      success: true,
+      message: "Account created successfully"
+    });
+
+  } catch (err) {
+    console.log(
+      "VERIFY OTP ERROR:",
+      err.response?.body || err.message || err
+    );
+
+    res.status(500).json({
+      success: false,
+      message: "Server error"
+    });
+  }
 });
-
 // =======================
 // LOGIN
 // =======================
@@ -1193,6 +1242,8 @@ app.get("/api/product/:id", async (req, res) => {
   res.json(product);
 });
 
+
+
 app.post("/api/products", upload.single("image"), async (req, res) => {
   try {
 
@@ -1273,6 +1324,7 @@ app.get("/api/orders/my", authMiddleware, async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 });
+
 app.get("/api/orders", async (req, res) => {
   try {
 

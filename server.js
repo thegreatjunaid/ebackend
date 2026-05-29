@@ -919,6 +919,80 @@ cloudinary.config({
 
 module.exports = cloudinary;
 
+
+
+
+
+
+
+
+const passport = require("passport");
+const GoogleStrategy = require("passport-google-oauth20").Strategy;
+
+// PASSPORT GOOGLE SETUP
+passport.use(new GoogleStrategy({
+  clientID: process.env.GOOGLE_CLIENT_ID,
+  clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+  callbackURL: "/auth/google/callback"
+}, async (accessToken, refreshToken, profile, done) => {
+  try {
+    const email = profile.emails[0].value;
+    const googleId = profile.id;
+    const avatar = profile.photos[0].value;
+
+    let user = await User.findOne({ email });
+
+    if (user) {
+      if (!user.googleId) {
+        user.googleId = googleId;
+        user.avatar = avatar;
+        user.isVerified = true;
+        await user.save();
+      }
+    } else {
+      user = await User.create({ email, googleId, avatar, isVerified: true });
+    }
+
+    return done(null, user);
+  } catch (err) {
+    return done(err, null);
+  }
+}));
+
+app.use(passport.initialize());
+
+// GOOGLE ROUTES
+app.get("/auth/google",
+  passport.authenticate("google", { scope: ["email", "profile"], session: false })
+);
+
+app.get("/auth/google/callback",
+  passport.authenticate("google", { failureRedirect: "http://localhost:5173/login", session: false }),
+  (req, res) => {
+    const token = jwt.sign(
+      { id: req.user._id },       // "id" to match your existing pattern
+      "junaid_secret_key",         // same secret as your login
+      { expiresIn: "1d" }          // same expiry as your login
+    );
+    res.redirect(`https://kkllkk.netlify.app/auth/success?token=${token}&userId=${req.user._id}`);
+  }
+);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // =======================
 // PROFILE
 // =======================
@@ -1000,24 +1074,19 @@ app.post("/api/verify-otp", async (req, res) => {
       });
     }
 
-    // CHECK OTP
-    if (pendingUser.otp !== otp) {
-      return res.status(400).json({
-        success: false,
-        message: "Wrong OTP"
-      });
-    }
- 
-      console.log("BODY:", req.body);
-console.log("PENDING USERS:", pendingUsers);
-console.log("EMAIL:", email);
-console.log("OTP:", otp);
-console.log("FOUND USER:", pendingUsers[email]);
     // CHECK OTP EXPIRATION
     if (new Date() > pendingUser.otpExpire) {
       return res.status(400).json({
         success: false,
         message: "OTP expired"
+      });
+    }
+
+    // CHECK OTP
+    if (pendingUser.otp !== otp) {
+      return res.status(400).json({
+        success: false,
+        message: "Wrong OTP"
       });
     }
 
@@ -1032,17 +1101,21 @@ console.log("FOUND USER:", pendingUsers[email]);
     // REMOVE TEMP USER
     delete pendingUsers[email];
 
+    // SIGN JWT
+    const token = jwt.sign(
+      { userId: newUser._id, email: newUser.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
     res.json({
       success: true,
-      message: "Account created successfully"
+      message: "Account created successfully",
+      token  // send token to frontend
     });
 
   } catch (err) {
-    console.log(
-      "VERIFY OTP ERROR:",
-      err.response?.body || err.message || err
-    );
-
+    console.log("VERIFY OTP ERROR:", err.response?.body || err.message || err);
     res.status(500).json({
       success: false,
       message: "Server error"
@@ -1290,14 +1363,29 @@ app.delete("/api/products/:id", async (req, res) => {
 // ORDERS
 // =======================
 
-app.post("/api/order", authMiddleware, async (req, res) => {
+app.post("/api/order", async (req, res) => {
   try {
-    const { address, phone, items } = req.body;
+    const { address, phone, items, guestName, guestEmail } = req.body;
+
+    // Try to get userId from token if present — don't block if missing
+    let userId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+      try {
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(token, "junaid_secret_key");
+        userId = decoded.id;
+      } catch {
+        // invalid/expired token → treat as guest
+      }
+    }
 
     const total = items.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
     const order = new Order({
-      userId: req.user.id,
+      userId,                              // null if guest
+      guestName: userId ? null : guestName,
+      guestEmail: userId ? null : guestEmail,
       items,
       totalAmount: total,
       address,
@@ -1306,10 +1394,11 @@ app.post("/api/order", authMiddleware, async (req, res) => {
 
     await order.save();
 
-    res.json({ message: "Order placed successfully!" });
+    res.json({ success: true, message: "Order placed successfully!", order });
 
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    console.log("ORDER ERROR:", err.message);
+    res.status(500).json({ success: false, message: "Server error" });
   }
 });
 

@@ -4,8 +4,20 @@ const orderSchema = new mongoose.Schema({
   userId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
-    required: true
+    required: false,  // ← optional now
+    default: null
   },
+
+  // Guest info (only filled if not logged in)
+  guestName: {
+    type: String,
+    default: null
+  },
+  guestEmail: {
+    type: String,
+    default: null
+  },
+
   items: [
     {
       productId: {
@@ -18,13 +30,17 @@ const orderSchema = new mongoose.Schema({
       quantity: Number
     }
   ],
+
   totalAmount: Number,
+
   status: {
     type: String,
-    default: "Pending"   // 🔥 default status
+    default: "Pending"
   },
+
   address: String,
   phone: String,
+
   createdAt: {
     type: Date,
     default: Date.now

@@ -1,16 +1,17 @@
 const mongoose = require("mongoose");
 
 const userSchema = new mongoose.Schema({
-  email: String,
-  password: String,
+  email: { type: String, required: true, unique: true },
+  password: { type: String, default: null }, // null for Google users
 
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
+  isVerified: { type: Boolean, default: false },
 
-  otp: String,
-  otpExpire: Date
-});
+  // Google OAuth
+  googleId: { type: String, default: null },
+  avatar: { type: String, default: null }, // Google profile picture
+
+  otp: { type: String, default: null },
+  otpExpire: { type: Date, default: null }
+}, { timestamps: true });
 
 module.exports = mongoose.model("User", userSchema);

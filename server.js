@@ -974,7 +974,7 @@ app.get("/auth/google/callback",
       "junaid_secret_key",         // same secret as your login
       { expiresIn: "1d" }          // same expiry as your login
     );
-    res.redirect(`https://kkllkk.netlify.app/auth/success?token=${token}&userId=${req.user._id}`);
+    res.redirect(`http://localhost:5173/auth/success?token=${token}&userId=${req.user._id}`);
   }
 );
 
@@ -988,7 +988,18 @@ app.get("/auth/google/callback",
 
 
 
-
+//tr order
+app.get("/api/order/track/:id", async (req, res) => {
+  try {
+    const order = await Order.findById(req.params.id);
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    res.json(order);
+  } catch (err) {
+    res.status(500).json({ message: "Invalid Order ID" });
+  }
+});
 
 
 

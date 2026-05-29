@@ -967,7 +967,7 @@ app.get("/auth/google",
 );
 
 app.get("/auth/google/callback",
-  passport.authenticate("google", { failureRedirect: "http://localhost:5173/login", session: false }),
+  passport.authenticate("google", { failureRedirect: "https://kkllkk.netlify.app/login", session: false }),
   (req, res) => {
     const token = jwt.sign(
       { id: req.user._id },       // "id" to match your existing pattern

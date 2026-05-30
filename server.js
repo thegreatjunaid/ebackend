@@ -974,7 +974,7 @@ app.get("/auth/google/callback",
       "junaid_secret_key",         // same secret as your login
       { expiresIn: "1d" }          // same expiry as your login
     );
-    res.redirect(`http://localhost:5173/auth/success?token=${token}&userId=${req.user._id}`);
+    res.redirect(`https://thegreatjunaid.netlify.app/auth/success?token=${token}&userId=${req.user._id}`);
   }
 );
 

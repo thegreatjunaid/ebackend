@@ -1127,8 +1127,7 @@ app.post("/api/verify-otp", async (req, res) => {
 
     res.json({
       success: true,
-      message: "Account created successfully",
-      token  // send token to frontend
+      message: "Account created successfully"
     });
 
   } catch (err) {

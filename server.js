@@ -1119,11 +1119,11 @@ app.post("/api/verify-otp", async (req, res) => {
     delete pendingUsers[email];
 
     // SIGN JWT
-    const token = jwt.sign(
-      { userId: newUser._id, email: newUser.email },
-      process.env.JWT_SECRET,
-      { expiresIn: "7d" }
-    );
+    // const token = jwt.sign(
+    //   { userId: newUser._id, email: newUser.email },
+    //   process.env.JWT_SECRET,
+    //   { expiresIn: "7d" }
+    // );
 
     res.json({
       success: true,

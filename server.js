@@ -1032,12 +1032,14 @@ app.post("/api/register", async (req, res) => {
       otp,
       otpExpire
     };
-
+console.log("BREVO KEY:", process.env.BREVO_API_KEY);
+console.log("Sending OTP:", otp);
+console.log("To:", email);
     // SEND OTP EMAIL
     await apiInstance.sendTransacEmail({
       sender: {
-        email: "jahidjunaid99@gmail.com",
-        name: "Your App"
+        email: "2023-3-60-432@std.ewubd.edu",
+        name: "JUNAIDSTORE"
       },
 
       to: [
@@ -1060,15 +1062,19 @@ console.log("To:", email);
     });
 
   } catch (err) {
-    console.log(
-      "REGISTER ERROR:",
-      err.response?.body || err.message || err
-    );
+  console.log("=== REGISTER ERROR START ===");
+  console.log("Message:", err.message);
+  console.log("Status:", err.status || err.statusCode);
+  console.log("Response body:", JSON.stringify(err.response?.body, null, 2));
+  console.log("Full error:", JSON.stringify(err, Object.getOwnPropertyNames(err), 2));
+  console.log("=== REGISTER ERROR END ===");
 
-    res.status(500).json({
-      message: "Server error"
-    });
-  }
+  res.status(500).json({
+    message: "Server error",
+    error: err.message,
+    detail: err.response?.body  // ← also send it to frontend temporarily
+  });
+}
 });
 //verify otp
 app.post("/api/verify-otp", async (req, res) => {
